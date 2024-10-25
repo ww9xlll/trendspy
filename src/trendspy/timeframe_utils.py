@@ -118,6 +118,9 @@ def convert_timeframe(timeframe, convert_fixed_timeframes_to_dates=False):
 	
 	# Replace 'now' and 'today' with the current datetime in the appropriate format
 	utc_now = datetime.now(timezone.utc)
+	if convert_fixed_timeframes_to_dates and timeframe=='all':
+		return '2024-01-01 {}'.format(utc_now.strftime(DATE_FORMAT))
+
 	timeframe = timeframe.replace('now', utc_now.strftime(DATE_T_FORMAT)).replace('today', utc_now.strftime(DATE_FORMAT))
 
 	# Split the timeframe into two parts
