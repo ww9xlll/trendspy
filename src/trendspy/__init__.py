@@ -10,6 +10,11 @@ Main components:
 - BatchPeriod: Enum for specifying time periods in batch operations
 - TrendKeyword: Class representing a trending search term with metadata
 - NewsArticle: Class representing news articles related to trends
+
+Project links:
+    Homepage: https://github.com/sdil87/trendspy
+    Repository: https://github.com/sdil87/trendspy.git
+    Issues: https://github.com/sdil87/trendspy/issues
 """
 
 from .client import Trends, BatchPeriod
