@@ -34,19 +34,17 @@ pip install trendspy
 
 ```python
 from trendspy import Trends
-import pandas as pd
-
-# Initialize the client
 tr = Trends()
-
-# Get and visualize interest over time
 df = tr.interest_over_time(['python', 'javascript'])
 df.plot(title='Python vs JavaScript Interest Over Time', 
         figsize=(12, 6))
+```
 
+```python
 # Analyze geographic distribution
 geo_df = tr.interest_by_region('python')
-
+```
+```python
 # Get related queries
 related = tr.related_queries('python')
 ```
