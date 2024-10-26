@@ -22,7 +22,7 @@ class TrendsDataConverter:
 	def token_to_bullets(token_data):
 		items = token_data.get('request', {}).get('comparisonItem', [])
 		bullets = [item.get('complexKeywordsRestriction', {}).get('keyword', [''])[0].get('value','') for item in items]
-		metadata = [next(iter(item.get('geo', {'':'unk'}).values())) for item in items]
+		metadata = [next(iter(item.get('geo', {'':'unk'}).values()), 'unk') for item in items]
 		if len(set(metadata))>1:
 			bullets = [b+' | '+m for b,m in zip(bullets, metadata)]
 		metadata = [item.get('time', '').replace('\\', '') for item in items]
