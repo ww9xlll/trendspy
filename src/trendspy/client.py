@@ -420,7 +420,9 @@ class Trends:
 	
 	def suggestions(self, keyword, language=None, return_raw=False):
 		params = {'hz':language, 'tz':self.tzs} if language else self._default_params
-		req  = self._get(API_AUTOCOMPLETE+quote_plus(keyword), params)
+		encoded_keyword = keyword.replace("'", "")
+		encoded_keyword = quote(encoded_keyword, safe='-')
+		req  = self._get(API_AUTOCOMPLETE+quote_plus(encoded_keyword), params)
 		data = self._parse_protected_json(req)
 		if return_raw:
 			return data
