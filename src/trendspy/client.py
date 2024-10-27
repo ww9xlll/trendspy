@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from enum import Enum
 from typing import Dict, List, Optional
-from urllib.parse import quote
+from urllib.parse import quote, quote_plus
 from .utils import *
 from .converter import TrendsDataConverter
 from .trend_keyword import *
@@ -420,7 +420,7 @@ class Trends:
 	
 	def suggestions(self, keyword, language=None, return_raw=False):
 		params = {'hz':language, 'tz':self.tzs} if language else self._default_params
-		req  = self._get(API_AUTOCOMPLETE+quote(keyword), params)
+		req  = self._get(API_AUTOCOMPLETE+quote_plus(keyword), params)
 		data = self._parse_protected_json(req)
 		if return_raw:
 			return data
