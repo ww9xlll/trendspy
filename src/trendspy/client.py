@@ -419,7 +419,7 @@ class Trends:
 		return TrendsDataConverter.geo_data(data, bullets)
 	
 	def suggestions(self, keyword, language=None, return_raw=False):
-		params = {'hz':language, 'tz':self.tzs} if language else self._default_params
+		params = {'hl':language, 'tz':self.tzs} if language else self._default_params
 		encoded_keyword = keyword.replace("'", "")
 		encoded_keyword = quote(encoded_keyword, safe='-')
 		req  = self._get(API_AUTOCOMPLETE+encoded_keyword, params)
