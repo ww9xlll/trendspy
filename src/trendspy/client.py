@@ -13,6 +13,21 @@ from .news_article import *
 from .timeframe_utils import convert_timeframe, check_timeframe_resolution
 from .hierarchical_search import create_hierarchical_index
 
+class TrendsQuotaExceededError(Exception):
+    """Raised when the Google Trends API quota is exceeded for related queries/topics."""
+    def __init__(self):
+        super().__init__(
+            "API quota exceeded for related queries/topics. "
+            "To resolve this, you can try:\n"
+            "1. Use a different referer in request headers:\n"
+            "   tr.related_queries(keyword, headers={'referer': 'https://www.google.com/'})\n"
+            "2. Use a different IP address by configuring a proxy:\n"
+            "   tr.set_proxy('http://proxy:port')\n"
+            "   # or\n"
+            "   tr = Trends(proxy={'http': 'http://proxy:port', 'https': 'https://proxy:port'})\n"
+            "3. Wait before making additional requests"
+        )
+
 class BatchPeriod(Enum): # update every 2 min
 	'''
 	Time periods for batch operations.
@@ -251,7 +266,7 @@ class Trends:
 		data   = Trends._parse_protected_json(req)
 		return data
 
-	def _get_token_data(self, url, params=None, request_fix=None, headers=None):
+	def _get_token_data(self, url, params=None, request_fix=None, headers=None, raise_quota_error=False):
 		"""
 		Internal method to get token data from Google Trends API.
 		
@@ -265,6 +280,12 @@ class Trends:
 
 		if request_fix is not None:
 			token = {**token, 'request':{**token['request'], **request_fix}}
+
+		if raise_quota_error:
+			user_type = token.get('request', {}).get('userConfig', {}).get('userType', '')
+			if user_type == "USER_TYPE_EMBED_OVER_QUOTA":
+				raise TrendsQuotaExceededError()
+
 		data 	= self._token_to_data(token)
 		return token, data
 
@@ -340,18 +361,22 @@ class Trends:
 	
 	def related_queries(self, keyword, timeframe="today 12-m", geo='', cat=0, gprop='', return_raw = False, headers=None):
 		"""
-		Retrieves related queries for a single search term.
-		
-		Parameters:
-			keyword (str): A single keyword to analyze. Multiple keywords are not supported
-				for this endpoint.
-			timeframe (str): Time range for analysis
-			geo (str): Geographic location code
-			cat (int): Category ID
-			gprop (str): Google property filter
-			return_raw (bool): If True, returns raw API response
+        Retrieves related queries for a single search term.
+        
+        Args:
+            keyword (str): A single keyword to analyze
+            timeframe (str): Time range for analysis
+            geo (str): Geographic location code
+            cat (int): Category ID
+            gprop (str): Google property filter
+            return_raw (bool): If True, returns raw API response
+            headers (dict, optional): Custom request headers. Can be used to set different referer
+                                    to help bypass quota limits
+        
+        Raises:
+            TrendsQuotaExceededError: When API quota is exceeded
 			
-		Returns:
+		Parameters:
 			dict: Two DataFrames containing 'top' and 'rising' related queries
 			
 		Example:
@@ -363,7 +388,7 @@ class Trends:
 			>>> print(related['rising'])
 		"""
 		headers = headers or {"referer": "https://trends.google.com/trends/explore"}
-		token, data = self._get_token_data(EMBED_QUERIES_URL, locals(), headers=headers)
+		token, data = self._get_token_data(EMBED_QUERIES_URL, locals(), headers=headers, raise_quota_error=True)
 		if return_raw:
 			return token, data
 		return TrendsDataConverter.related_queries(data)
@@ -373,16 +398,17 @@ class Trends:
 		Retrieves related topics for a single search term.
 		
 		Parameters:
-			keyword (str): A single keyword to analyze. Multiple keywords are not supported
-				for this endpoint.
-			timeframe (str): Time range for analysis
-			geo (str): Geographic location code
-			cat (int): Category ID
-			gprop (str): Google property filter
-			return_raw (bool): If True, returns raw API response
-			
-		Returns:
-			dict: Two DataFrames containing 'top' and 'rising' related topics
+            keyword (str): A single keyword to analyze
+            timeframe (str): Time range for analysis
+            geo (str): Geographic location code
+            cat (int): Category ID
+            gprop (str): Google property filter
+            return_raw (bool): If True, returns raw API response
+            headers (dict, optional): Custom request headers. Can be used to set different referer
+                                    to help bypass quota limits
+        
+        Raises:
+            TrendsQuotaExceededError: When API quota is exceeded
 			
 		Example:
 			>>> tr = Trends()
@@ -393,7 +419,7 @@ class Trends:
 			>>> print(related['rising'])
 		"""
 		headers = headers or {"referer": "https://trends.google.com/trends/explore"}
-		token, data = self._get_token_data(EMBED_TOPICS_URL, locals(), headers=headers)
+		token, data = self._get_token_data(EMBED_TOPICS_URL, locals(), headers=headers, raise_quota_error=True)
 		if return_raw:
 			return token, data
 		return TrendsDataConverter.related_queries(data)
