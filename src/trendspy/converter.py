@@ -32,7 +32,7 @@ class TrendsDataConverter:
 		return bullets
 
 	@staticmethod
-	def interest_over_time(widget_data, keywords=None, time_as_index=True):
+	def interest_over_time(widget_data, keywords, time_as_index=True):
 		"""
 		Converts interest over time data to a pandas DataFrame.
 
@@ -47,6 +47,9 @@ class TrendsDataConverter:
 		timeline_data = widget_data
 		timeline_data = timeline_data.get('default', timeline_data)
 		timeline_data = timeline_data.get('timelineData', timeline_data)
+		if not timeline_data:
+			return pd.DataFrame(columns=keywords)
+
 
 		df_data = np.array(extract_column(timeline_data, 'value')).reshape(len(timeline_data), -1)
 		df_data = dict(zip(keywords, df_data.T))
