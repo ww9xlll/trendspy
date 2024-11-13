@@ -70,13 +70,25 @@ class Trends:
 			- {"http": "http://10.10.1.10:3128", "https": "http://10.10.1.10:1080"}
 	"""
 		
-	def __init__(self, hl='en-US', tzs=360, use_enitity_names = False, proxy=None):
-		if (not isinstance(hl, str)) or (not 2 <= len(hl) <= 5) or ('-' not in hl):
-			hl = 'en-US'
+	def __init__(self, language='en', tzs=360, use_enitity_names = False, proxy=None, **kwargs):
+		"""
+		Initialize the Trends client.
 		
-		self.language, self.country = hl.split('-')
-		self.language = self.language.lower() if len(self.language) == 2 else 'en'
-		self.country = self.country.upper() if len(self.country) == 2 else None
+		Args:
+			language (str): Language code (e.g., 'en', 'es', 'fr').
+			tzs (int): Timezone offset in minutes. Defaults to 360.
+			use_enitity_names (bool): Whether to use entity names instead of keywords.
+			proxy (str or dict): Proxy configuration.
+			**kwargs: Additional arguments for backwards compatibility.
+				- hl (str, deprecated): Old-style language code (e.g., 'en' or 'en-US').
+				If provided, will be used as fallback when language is invalid.
+		"""
+		if isinstance(language, str) and len(language) >= 2:
+			self.language = language[:2].lower()
+		elif 'hl' in kwargs and isinstance(kwargs['hl'], str) and len(kwargs['hl']) >= 2:
+			self.language = kwargs['hl'][:2].lower()
+		else:
+			self.language = 'en'
 	
 		# self.hl = hl
 		self.tzs = tzs or -int(datetime.now().astimezone().utcoffset().total_seconds()/60)
@@ -176,7 +188,7 @@ class Trends:
 		req.update(self._default_params)
 		return req
 	
-	def _get(self, url, params=None):
+	def _get(self, url, params=None, headers=None):
 		"""
 		Make HTTP GET request with retry logic and proxy support.
 		
@@ -193,10 +205,11 @@ class Trends:
 		"""
 		retries = 2
 		response_code = 429
-		
+
 		while (retries > 0) and (response_code in {429}):
 			try:
-				req = self.session.get(url, params=params)
+				
+				req = self.session.get(url, params=params, headers=headers)
 				response_code = req.status_code
 				retries -= 1
 				
@@ -238,7 +251,7 @@ class Trends:
 		data   = Trends._parse_protected_json(req)
 		return data
 
-	def _get_token_data(self, url, params=None, request_fix=None):
+	def _get_token_data(self, url, params=None, request_fix=None, headers=None):
 		"""
 		Internal method to get token data from Google Trends API.
 		
@@ -247,7 +260,7 @@ class Trends:
 		"""
 
 		params 	= self._encode_request(params)
-		req 	= self._get(url, params)
+		req 	= self._get(url, params=params, headers=headers)
 		token 	= self._extract_embedded_data(req.text)
 
 		if request_fix is not None:
@@ -325,7 +338,7 @@ class Trends:
 			return TrendsDataConverter.multirange_interest_over_time(data, bullets=bullets)
 		return data
 	
-	def related_queries(self, keyword, timeframe="today 12-m", geo='', cat=0, gprop='', return_raw = False):
+	def related_queries(self, keyword, timeframe="today 12-m", geo='', cat=0, gprop='', return_raw = False, headers=None):
 		"""
 		Retrieves related queries for a single search term.
 		
@@ -349,13 +362,13 @@ class Trends:
 			>>> print("\nRising queries:")
 			>>> print(related['rising'])
 		"""
-
-		token, data = self._get_token_data(EMBED_QUERIES_URL, locals())
+		headers = headers or {"referer": "https://trends.google.com/trends/explore"}
+		token, data = self._get_token_data(EMBED_QUERIES_URL, locals(), headers=headers)
 		if return_raw:
 			return token, data
 		return TrendsDataConverter.related_queries(data)
 	
-	def related_topics(self, keyword, timeframe="today 12-m", geo='', cat=0, gprop='', return_raw = False):
+	def related_topics(self, keyword, timeframe="today 12-m", geo='', cat=0, gprop='', return_raw = False, headers=None):
 		"""
 		Retrieves related topics for a single search term.
 		
@@ -379,8 +392,8 @@ class Trends:
 			>>> print("\nRising topics:")
 			>>> print(related['rising'])
 		"""
-
-		token, data = self._get_token_data(EMBED_TOPICS_URL, locals())
+		headers = headers or {"referer": "https://trends.google.com/trends/explore"}
+		token, data = self._get_token_data(EMBED_TOPICS_URL, locals(), headers=headers)
 		if return_raw:
 			return token, data
 		return TrendsDataConverter.related_queries(data)
@@ -419,7 +432,7 @@ class Trends:
 		return TrendsDataConverter.geo_data(data, bullets)
 	
 	def suggestions(self, keyword, language=None, return_raw=False):
-		params = {'hl':language, 'tz':self.tzs} if language else self._default_params
+		params = {'hz':language, 'tz':self.tzs} if language else self._default_params
 		encoded_keyword = keyword.replace("'", "")
 		encoded_keyword = quote(encoded_keyword, safe='-')
 		req  = self._get(API_AUTOCOMPLETE+encoded_keyword, params)

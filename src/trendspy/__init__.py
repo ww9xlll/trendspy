@@ -21,5 +21,5 @@ from .client import Trends, BatchPeriod
 from .trend_keyword import TrendKeyword, TrendKeywordLite
 from .news_article import NewsArticle
 
-__version__ = "0.1.1"
+__version__ = "0.1.3"
 __all__ = ['Trends', 'BatchPeriod', 'TrendKeyword', 'TrendKeywordLite', 'NewsArticle']
