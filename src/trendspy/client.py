@@ -12,7 +12,7 @@ from .trend_keyword import *
 from .news_article import *
 from .timeframe_utils import convert_timeframe, check_timeframe_resolution
 from .hierarchical_search import create_hierarchical_index
-from time import sleep
+from time import sleep,time
 
 class TrendsQuotaExceededError(Exception):
     """Raised when the Google Trends API quota is exceeded for related queries/topics."""
@@ -86,13 +86,15 @@ class Trends:
 			- {"http": "http://10.10.1.10:3128", "https": "http://10.10.1.10:1080"}
 	"""
 		
-	def __init__(self, language='en', tzs=360, use_enitity_names = False, proxy=None, **kwargs):
+	def __init__(self, language='en', tzs=360, request_delay=1., max_retries=3, use_enitity_names = False, proxy=None, **kwargs):
 		"""
 		Initialize the Trends client.
 		
 		Args:
 			language (str): Language code (e.g., 'en', 'es', 'fr').
 			tzs (int): Timezone offset in minutes. Defaults to 360.
+			request_delay (float): Minimum time interval between requests in seconds. Helps avoid hitting rate limits and behaving like a bot. Set to 0 to disable.
+			max_retries (int): Maximum number of retry attempts for failed requests. Each retry includes exponential backoff delay of 2^(max_retries-retries) seconds for rate limit errors (429, 302).
 			use_enitity_names (bool): Whether to use entity names instead of keywords.
 			proxy (str or dict): Proxy configuration.
 			**kwargs: Additional arguments for backwards compatibility.
@@ -114,6 +116,9 @@ class Trends:
 		self._headers = {'accept-language': self.language}
 		self._geo_cache = {}
 		self._category_cache = {}  # Add category cache
+		self.request_delay = request_delay
+		self.max_retires = max_retries
+		self.last_request_times = {0,1}
 		# Initialize proxy configuration
 		self.set_proxy(proxy)
 	
@@ -219,15 +224,21 @@ class Trends:
 			ValueError: If response status code is not 200
 			requests.exceptions.RequestException: For network-related errors
 		"""
-		max_retires = 3
-		retries = max_retires
+		retries = self.max_retires
 		response_code = 429
 		response_codes = []
 		last_response = None
 		req = None
 		while (retries > 0):
 			try:
-				
+
+				if self.request_delay:
+					min_time = min(self.last_request_times)
+					sleep_time = max(0, self.request_delay - (time() - min_time))
+					sleep(sleep_time)
+					# print('sleep ', sleep_time) if sleep_time else None
+					self.last_request_times = (self.last_request_times - {min_time,}) | {time(),}
+
 				req = self.session.get(url, params=params, headers=headers)
 				last_response = req
 				response_code = req.status_code
@@ -236,8 +247,9 @@ class Trends:
 				if response_code == 200:
 					return req
 				else:
+					print(response_code)
 					if response_code in {429,302}:
-						sleep(2**(max_retires-retries))
+						sleep(2**(self.max_retires-retries))
 					retries -= 1
 				
 			except Exception as e:
@@ -245,7 +257,11 @@ class Trends:
 					raise
 				retries -= 1
 
-		# print('Last response codes: ', response_codes)
+		if response_codes.count(429) > len(response_codes) / 2:
+			current_delay = self.request_delay or 1
+			print(f"\nWarning: Too many rate limit errors (429). Consider increasing request_delay "
+				f"to Trends(request_delay={current_delay*2}) before Google implements a long-term "
+				f"rate limit!")
 		last_response.raise_for_status()
 
 	@classmethod
