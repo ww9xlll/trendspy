@@ -12,6 +12,7 @@ from .trend_keyword import *
 from .news_article import *
 from .timeframe_utils import convert_timeframe, check_timeframe_resolution
 from .hierarchical_search import create_hierarchical_index
+from time import sleep
 
 class TrendsQuotaExceededError(Exception):
     """Raised when the Google Trends API quota is exceeded for related queries/topics."""
@@ -202,7 +203,7 @@ class Trends:
 
 		req.update(self._default_params)
 		return req
-	
+
 	def _get(self, url, params=None, headers=None):
 		"""
 		Make HTTP GET request with retry logic and proxy support.
@@ -218,29 +219,34 @@ class Trends:
 			ValueError: If response status code is not 200
 			requests.exceptions.RequestException: For network-related errors
 		"""
-		retries = 2
+		max_retires = 3
+		retries = max_retires
 		response_code = 429
-
-		while (retries > 0) and (response_code in {429}):
+		response_codes = []
+		last_response = None
+		req = None
+		while (retries > 0):
 			try:
 				
 				req = self.session.get(url, params=params, headers=headers)
+				last_response = req
 				response_code = req.status_code
-				retries -= 1
-				
+				response_codes.append(response_code)
+
 				if response_code == 200:
 					return req
-				elif response_code == 407:  # Proxy Authentication Required
-					raise ValueError("Proxy authentication failed. Check your proxy credentials.")
+				else:
+					if response_code in {429,302}:
+						sleep(2**(max_retires-retries))
+					retries -= 1
 				
-			except requests.exceptions.ProxyError as e:
+			except Exception as e:
 				if retries == 0:
-					raise ValueError(f"Proxy connection failed: {str(e)}")
-			except requests.exceptions.RequestException as e:
-				if retries == 0:
-					raise ValueError(f"Request failed: {str(e)}")
-				
-		raise ValueError(f"Invalid response: status {response_code}")
+					raise
+				retries -= 1
+
+		# print('Last response codes: ', response_codes)
+		last_response.raise_for_status()
 
 	@classmethod
 	def _extract_embedded_data(cls, text):
@@ -262,7 +268,8 @@ class Trends:
 
 		params = {'req': json.dumps(token['request']), 'token': token['token']}
 		params.update(self._default_params)
-		req    = self.session.get(URL, params=params)
+		# req    = self.session.get(URL, params=params)
+		req    = self._get(URL, params=params)
 		data   = Trends._parse_protected_json(req)
 		return data
 
@@ -298,7 +305,7 @@ class Trends:
 		req = self.session.post(BATCH_URL, post_data, headers=headers)
 		return req
 
-	def interest_over_time(self, keywords, timeframe="today 12-m", geo='', cat=0, gprop='', return_raw = False):
+	def interest_over_time(self, keywords, timeframe="today 12-m", geo='', cat=0, gprop='', return_raw = False, headers=None):
 		"""
 		Retrieves interest over time data for specified keywords.
 		
@@ -347,7 +354,7 @@ class Trends:
 		check_timeframe_resolution(timeframe)
 		timeframe = list(map(convert_timeframe, ensure_list(timeframe)))
 
-		token, data = self._get_token_data(EMBED_TIMESERIES_URL, locals())
+		token, data = self._get_token_data(EMBED_TIMESERIES_URL, locals(), headers=headers)
 		if return_raw:
 			return token, data
 
