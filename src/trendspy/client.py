@@ -236,7 +236,6 @@ class Trends:
 					min_time = min(self.last_request_times)
 					sleep_time = max(0, self.request_delay - (time() - min_time))
 					sleep(sleep_time)
-					# print('sleep ', sleep_time) if sleep_time else None
 					self.last_request_times = (self.last_request_times - {min_time,}) | {time(),}
 
 				req = self.session.get(url, params=params, headers=headers)
@@ -247,7 +246,6 @@ class Trends:
 				if response_code == 200:
 					return req
 				else:
-					print(response_code)
 					if response_code in {429,302}:
 						sleep(2**(self.max_retires-retries))
 					retries -= 1
