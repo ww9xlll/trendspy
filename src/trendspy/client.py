@@ -12,6 +12,7 @@ from .trend_keyword import *
 from .news_article import *
 from .timeframe_utils import convert_timeframe, check_timeframe_resolution
 from .hierarchical_search import create_hierarchical_index
+from .trend_list import TrendList
 from time import sleep,time
 
 class TrendsQuotaExceededError(Exception):
@@ -572,7 +573,7 @@ class Trends:
 			return data
 
 		data = json.loads(data[0][2])
-		data = list(map(TrendKeyword, data[1]))
+		data = TrendList(map(TrendKeyword, data[1]))
 		return data
 
 	def trending_now_by_rss(self, geo='US', return_raw=False):

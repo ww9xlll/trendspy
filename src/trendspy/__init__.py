@@ -22,4 +22,4 @@ from .trend_keyword import TrendKeyword, TrendKeywordLite
 from .news_article import NewsArticle
 
 __version__ = "0.1.5"
-__all__ = ['Trends', 'BatchPeriod', 'TrendKeyword', 'TrendKeywordLite', 'NewsArticle']
+__all__ = ['Trends', 'BatchPeriod', 'TrendKeyword', 'TrendKeywordLite', 'NewsArticle', 'TrendList']
