@@ -88,7 +88,7 @@ class Trends:
 			- {"http": "http://10.10.1.10:3128", "https": "http://10.10.1.10:1080"}
 	"""
 		
-	def __init__(self, language='en', tzs=360, request_delay=1., max_retries=3, use_enitity_names = False, proxy=None, **kwargs):
+	def __init__(self, language='en', tzs=360, request_delay=1., max_retries=3, use_enitity_names = False, proxy=None, cert=None, verify=True, **kwargs):
 		"""
 		Initialize the Trends client.
 		
@@ -123,6 +123,8 @@ class Trends:
 		self.last_request_times = {0,1}
 		# Initialize proxy configuration
 		self.set_proxy(proxy)
+		self.cert = cert
+		self.verify = verify
 	
 	def set_proxy(self, proxy=None):
 		"""
@@ -240,7 +242,7 @@ class Trends:
 					sleep(sleep_time)
 					self.last_request_times = (self.last_request_times - {min_time,}) | {time(),}
 
-				req = self.session.get(url, params=params, headers=headers, verify=False)
+				req = self.session.get(url, params=params, headers=headers, cert=self.cert, verify=self.verify)
 				last_response = req
 				response_code = req.status_code
 				response_codes.append(response_code)
