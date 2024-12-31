@@ -14,6 +14,7 @@ from .timeframe_utils import convert_timeframe, check_timeframe_resolution
 from .hierarchical_search import create_hierarchical_index
 from .trend_list import TrendList
 from time import sleep,time
+import traceback
 
 class TrendsQuotaExceededError(Exception):
     """Raised when the Google Trends API quota is exceeded for related queries/topics."""
@@ -252,6 +253,7 @@ class Trends:
 					retries -= 1
 				
 			except Exception as e:
+				traceback.print_exc()
 				if retries == 0:
 					raise
 				retries -= 1
