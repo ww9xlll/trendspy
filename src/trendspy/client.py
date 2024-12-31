@@ -240,7 +240,7 @@ class Trends:
 					sleep(sleep_time)
 					self.last_request_times = (self.last_request_times - {min_time,}) | {time(),}
 
-				req = self.session.get(url, params=params, headers=headers)
+				req = self.session.get(url, params=params, headers=headers, verify=False)
 				last_response = req
 				response_code = req.status_code
 				response_codes.append(response_code)
